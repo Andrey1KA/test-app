@@ -1,20 +1,26 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { FavoriteButton } from './FavoriteButton';
 import { formatKickoff, formatScore, formatStatus } from '../format';
 import type { Match } from '../types';
 
 type Props = {
   match: Match;
+  favorite: boolean;
+  onToggleFavorite: () => void;
 };
 
-export function MatchCard({ match }: Props) {
+export function MatchCard({ match, favorite, onToggleFavorite }: Props) {
   const score = formatScore(match.score);
 
   return (
     <View style={styles.card}>
-      <View style={styles.teams}>
-        <Text style={styles.team}>{match.home?.name ?? '—'}</Text>
-        <Text style={styles.vs}>—</Text>
-        <Text style={styles.team}>{match.away?.name ?? '—'}</Text>
+      <View style={styles.header}>
+        <View style={styles.teams}>
+          <Text style={styles.team}>{match.home?.name ?? '—'}</Text>
+          <Text style={styles.vs}>—</Text>
+          <Text style={styles.team}>{match.away?.name ?? '—'}</Text>
+        </View>
+        <FavoriteButton active={favorite} onPress={onToggleFavorite} />
       </View>
       {score ? <Text style={styles.score}>{score}</Text> : null}
       <View style={styles.meta}>
@@ -32,12 +38,18 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 8,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   teams: {
+    flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: 6,
-    paddingRight: 48,
   },
   team: {
     fontSize: 16,

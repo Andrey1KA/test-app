@@ -12,6 +12,7 @@ import { fetchMatches } from '../api/fetchMatches';
 import { MatchCard } from '../components/MatchCard';
 import { UpdatedAgo } from '../components/UpdatedAgo';
 import { FILTERS, filterMatches, type MatchFilter } from '../filterMatches';
+import { useFavorites } from '../hooks/useFavorites';
 import type { Match } from '../types';
 
 export function MatchesScreen() {
@@ -22,6 +23,7 @@ export function MatchesScreen() {
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [filter, setFilter] = useState<MatchFilter>('all');
+  const { isFavorite, toggle } = useFavorites();
 
   const load = useCallback(async (mode: 'initial' | 'refresh') => {
     if (mode === 'initial') setLoading(true);
@@ -101,7 +103,13 @@ export function MatchesScreen() {
               refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={() => void load('refresh')} />
               }
-              renderItem={({ item }) => <MatchCard match={item} />}
+              renderItem={({ item }) => (
+                <MatchCard
+                  match={item}
+                  favorite={isFavorite(item.id)}
+                  onToggleFavorite={() => toggle(item.id)}
+                />
+              )}
             />
           )}
         </>
