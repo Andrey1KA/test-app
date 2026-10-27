@@ -3,12 +3,14 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { fetchMatches } from '../api/fetchMatches';
 import { MatchCard } from '../components/MatchCard';
+import { UpdatedAgo } from '../components/UpdatedAgo';
 import { FILTERS, filterMatches, type MatchFilter } from '../filterMatches';
 import type { Match } from '../types';
 
@@ -16,25 +18,30 @@ export function MatchesScreen() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [round, setRound] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [filter, setFilter] = useState<MatchFilter>('all');
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (mode: 'initial' | 'refresh') => {
+    if (mode === 'initial') setLoading(true);
+    else setRefreshing(true);
     setError(null);
     try {
       const data = await fetchMatches();
       setMatches(data.matches);
       setRound(typeof data.round === 'number' ? data.round : null);
+      setUpdatedAt(new Date());
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Не удалось загрузить матчи');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    void load();
+    void load('initial');
   }, [load]);
 
   const visible = filterMatches(matches, filter);
@@ -48,15 +55,22 @@ export function MatchesScreen() {
           <ActivityIndicator size="large" />
           <Text style={styles.hint}>Загружаем матчи…</Text>
         </View>
-      ) : error ? (
+      ) : error && updatedAt == null ? (
         <View style={styles.center}>
           <Text style={styles.error}>{error}</Text>
-          <Pressable style={styles.button} onPress={() => void load()}>
+          <Pressable style={styles.button} onPress={() => void load('initial')}>
             <Text style={styles.buttonText}>Повторить</Text>
           </Pressable>
         </View>
       ) : (
         <>
+          <View style={styles.toolbar}>
+            {updatedAt ? <UpdatedAgo since={updatedAt} /> : null}
+            <Pressable onPress={() => void load('refresh')} disabled={refreshing}>
+              <Text style={styles.refresh}>{refreshing ? 'Обновляем…' : 'Обновить'}</Text>
+            </Pressable>
+          </View>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
           <View style={styles.filters}>
             {FILTERS.map((item) => {
               const selected = item.id === filter;
@@ -84,6 +98,9 @@ export function MatchesScreen() {
               data={visible}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.list}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={() => void load('refresh')} />
+              }
               renderItem={({ item }) => <MatchCard match={item} />}
             />
           )}
@@ -125,6 +142,17 @@ const styles = StyleSheet.create({
   },
   filterTextSelected: {
     color: '#fff',
+  },
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  refresh: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
   },
   list: {
     gap: 10,
