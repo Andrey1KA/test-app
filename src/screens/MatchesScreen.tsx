@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -15,6 +16,41 @@ import { FILTERS, filterMatches, type MatchFilter } from '../filterMatches';
 import { useFavorites } from '../hooks/useFavorites';
 import type { Match } from '../types';
 
+const LIST_ID = 'matches-list';
+
+function useThinListScrollbar() {
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const styleId = 'matches-list-scrollbar';
+    let style = document.getElementById(styleId);
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+    }
+    style.textContent = `
+      #${LIST_ID}::-webkit-scrollbar {
+        width: 6px;
+      }
+      #${LIST_ID}::-webkit-scrollbar-button {
+        display: none;
+        width: 0;
+        height: 0;
+      }
+      #${LIST_ID}::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      #${LIST_ID}::-webkit-scrollbar-thumb {
+        background-color: #b8bec7;
+        border-radius: 999px;
+      }
+      #${LIST_ID}::-webkit-scrollbar-thumb:hover {
+        background-color: #9aa3af;
+      }
+    `;
+    document.head.appendChild(style);
+  }, []);
+}
+
 export function MatchesScreen() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [round, setRound] = useState<number | null>(null);
@@ -24,6 +60,7 @@ export function MatchesScreen() {
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [filter, setFilter] = useState<MatchFilter>('all');
   const { isFavorite, toggle } = useFavorites();
+  useThinListScrollbar();
 
   const load = useCallback(async (mode: 'initial' | 'refresh') => {
     if (mode === 'initial') setLoading(true);
@@ -99,6 +136,7 @@ export function MatchesScreen() {
             <FlatList
               data={visible}
               keyExtractor={(item) => item.id}
+              nativeID={LIST_ID}
               contentContainerStyle={styles.list}
               refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={() => void load('refresh')} />
